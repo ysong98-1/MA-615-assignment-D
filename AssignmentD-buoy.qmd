@@ -33,15 +33,15 @@ df$datetime <- as.POSIXct(
 
 clean_val <- function(x) ifelse(x %in% c(99, 999, 9999) | x < -90, NA, x)
 
-df <- df %>%
+df <- df |>
   mutate(
     WSPD = clean_val(WSPD),
     WVHT = clean_val(WVHT)
   )
 
-monthly_trends <- df %>%
-  mutate(Month = floor_date(datetime, "month")) %>%
-  group_by(Month) %>%
+monthly_trends <- df |>
+  mutate(Month = floor_date(datetime, "month")) |>
+  group_by(Month) |>
   summarise(
     avg_wind = mean(WSPD, na.rm = TRUE),
     avg_wave = mean(WVHT, na.rm = TRUE)
