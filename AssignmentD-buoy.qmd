@@ -1,0 +1,60 @@
+---
+title: "buoy assign"
+format: html
+editor: visual
+---
+
+How did average wind speed and wave height vary by month at station 44013 in 2024?
+
+```{r}
+df <- read.csv('~/Desktop/MA615/R doc/MA-615-assignment-D/Standard meteorological data 2024.txt',, header = TRUE, sep = "", fill = TRUE)
+head(df)
+library(dplyr)
+library(lubridate)
+library(ggplot2)
+
+df <- df %>% filter(!is.na(as.numeric(as.character(X.YY))))
+df <- df %>%
+  mutate(
+    Year2 = as.numeric(as.character(X.YY)),  
+    MM = as.numeric(as.character(MM)),       
+    DD = as.numeric(as.character(DD)),       
+    hh = as.numeric(as.character(hh)),       
+    WSPD = as.numeric(as.character(WSPD)),   
+    WVHT = as.numeric(as.character(WVHT))    
+  )
+df$YYYY <- ifelse(df$Year2 < 100, df$Year2 + 2000, df$Year2)
+
+df$datetime <- as.POSIXct(
+  paste(df$YYYY, df$MM, df$DD, df$hh, sep = "-"),
+  format = "%Y-%m-%d-%H",
+  tz = "UTC"
+)
+
+clean_val <- function(x) ifelse(x %in% c(99, 999, 9999) | x < -90, NA, x)
+
+df <- df %>%
+  mutate(
+    WSPD = clean_val(WSPD),
+    WVHT = clean_val(WVHT)
+  )
+
+monthly_trends <- df %>%
+  mutate(Month = floor_date(datetime, "month")) %>%
+  group_by(Month) %>%
+  summarise(
+    avg_wind = mean(WSPD, na.rm = TRUE),
+    avg_wave = mean(WVHT, na.rm = TRUE)
+  )
+
+ggplot(monthly_trends, aes(x = Month)) +
+  geom_line(aes(y = avg_wind, color = "Wind Speed (m/s)"), size = 1.2) +
+  geom_point(aes(y = avg_wind, color = "Wind Speed (m/s)")) +
+  geom_line(aes(y = avg_wave, color = "Wave Height (m)"), size = 1.2) +
+  geom_point(aes(y = avg_wave, color = "Wave Height (m)")) +
+  labs(title = "Monthly Average Wind Speed & Wave Height at Station 44013 in 2024",
+       x = "Month", y = "Value", color = "Legend") +
+  theme_minimal(base_size = 14)
+```
+
+Monthly trend data show that the average wind speed and average wave height at station 44013 exhibit significant seasonal variation. Both indicators peak during winter (January to March), reflecting the impact of strong winter storms in the region. During spring and summer (April to August), wind speed and wave height gradually decrease, indicating a more stable meteorological environment. Beginning in autumn (September to December), wind speed and wave height increase again, signaling the onset of a season characterized by increased storm activity. Overall, the graph clearly illustrates the seasonal variations in wind speed, with stronger winds and waves in winter and relatively calm spring and summer.

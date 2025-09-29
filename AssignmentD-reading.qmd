@@ -1,0 +1,186 @@
+---
+title: "Reading assignment"
+format: html
+editor: visual
+---
+
+## Exercise 3.2.5
+
+```{r}
+#1:
+install.packages("nycflights13")
+library(dplyr)
+library(nycflights13)
+flights %>% filter(arr_delay >= 120)
+flights %>% filter(dest %in% c("IAH", "HOU"))
+flights %>% filter(carrier %in% c("UA", "AA", "DL"))
+flights %>% filter(month %in% c(7, 8, 9))
+flights %>% filter(arr_delay > 120, dep_delay <= 0)
+flights %>% filter(dep_delay >= 60, arr_delay <= dep_delay - 30)
+```
+
+```{r}
+#4:
+daily_flights <- flights |>
+  group_by(year, month, day) |>
+  summarize(total_flights = n(), .groups = "drop")
+missing <- daily_flights |>
+  filter(total_flights == 0)
+missing
+
+# Yes, in 2013, there was a flight everday.  
+```
+
+```{r}
+#5: 
+flights %>% filter(distance == max(distance, na.rm = TRUE))
+flights %>% filter(distance == min(distance, na.rm = TRUE))
+```
+
+***Exercise 3.3.5:***
+
+```{r}
+#1:
+flights |>
+  select(dep_time, sched_dep_time, dep_delay) |>
+  slice(1:30) 
+
+#relationship: dep_delay = dep_time - sched_dep_time
+```
+
+#4:
+
+any_of() is a function from dplyr, which allows you to select columns safely using a character vector. In other words, if there are some typos or missing columns, you can still run your code without worrying about the errors.
+
+***Exercise 3.5.7:***
+
+```{r}
+#1
+c_delays <- flights %>%
+  group_by(carrier) %>%
+  summarize(
+    avg_dep_delay = mean(dep_delay, na.rm = TRUE),
+    n_flights = n()
+  ) %>%
+  arrange(desc(avg_dep_delay))
+
+c_delays
+
+c_dest_delays <- flights %>%
+  group_by(carrier, dest) %>%
+  summarize(
+    avg_dep_delay = mean(dep_delay, na.rm = TRUE),
+    n_flights = n()
+  ) %>%
+  arrange(desc(avg_dep_delay))
+
+c_dest_delays
+
+
+#F9 is the worst delay on average. 
+# I can not fully  disentangle the effects of bad airports vs. bad carriers, because many factors contribute to delays, flight delays are influenced by airlines and the airports they use, and airport congestion can also affect the average delay rate.
+```
+
+```{r}
+#2
+most_delay <- flights |>
+  group_by(dest) |>
+  slice_max(dep_delay, n = 1, with_ties = TRUE) 
+most_delay
+```
+
+```{r}
+#4
+flights %>% slice_min(dep_delay, n = -1)
+#It will interpret this as "delete the smallest (or largest) abs(n) rows" and return the remaining rows in the table.
+```
+
+```{r}
+#6
+df <- tibble(
+  x = 1:5,
+  y = c("a", "b", "a", "a", "b"),
+  z = c("K", "K", "L", "L", "K")
+)
+
+
+#(a)
+#it shows a grouped table 
+df |>
+  group_by(y)
+#group_by() is to split data into groups based on variables. 
+
+
+#(b)
+#it shows a table, and the y column is sorted alphabetically. 
+df |>
+  arrange(y)
+#group_by() is used to group and arrange() reorders the rows of a data frame based on the values of one or more columns. 
+
+
+#(c)
+# The output is grouped by "y", and calculates the average for each row of y. 
+df |>
+  group_by(y) |>
+  summarize(mean_x = mean(x))
+#Organize the data into groups and show the results of each group. 
+
+
+#(d)
+#The output is grouped by "y" and "z", and summarizes x by its mean for each group. 
+df |>
+  group_by(y, z) |>
+  summarize(mean_x = mean(x))
+# R shows which group are active after summarizing. 
+
+
+
+#(e)
+# The output is a data frame of "y" and "z", and summarizes x by its mean for each group. 
+df |>
+  group_by(y, z) |>
+  summarize(mean_x = mean(x), .groups = "drop")
+#part(d) is grouping, part (e) is an ungrouped table. 
+
+
+
+#(f)
+#output: one row per group with mean x. 
+df |>
+  group_by(y, z) |>
+  summarize(mean_x = mean(x))
+
+#output:a table with x, y,z and mean_x columns.
+df |>
+  group_by(y, z) |>
+  mutate(mean_x = mean(x))
+
+#differences: summarize: reduce each group to one row per group.
+              #mutate: keep the originals and add a new column. 
+```
+
+***New question: Are there certain airports that tends to have longer departure delays?***
+
+```{r}
+library(ggplot2)
+air_delays <- flights |>
+  group_by(dest) |>
+  summarize(
+    avg_dep_delay = mean(dep_delay, na.rm = TRUE),
+    n_flights = n()
+  ) |>
+  arrange(desc(avg_dep_delay))
+
+air_delays |>
+  slice_max(avg_dep_delay, n = 6) |>
+  ggplot(aes(x = reorder(dest, avg_dep_delay), y = avg_dep_delay)) +
+  geom_col(fill = "lightblue") +
+  coord_flip() +
+  labs(
+    title = "Top 6 Airports with Longest Average Departure Delays",
+    x = "Airport",
+    y = "Average Departure Delay"
+  )
+```
+
+The top 6 airports with the longest average departure delays include CAE, TUL, OKC, BHM, TYS, and JAC. Among them, CAE has the longest average delay, at approximately 36 minutes, while JAC has the shortest delay, around 27 minutes. The delays for CAE and TUL are nearly the same, and the remaining four airports (OKC, BHM, TYS, and JAC) have similar average delays. In addition, airports may experience longer delays due to high traffic volumes, limited runway capacity, and weather conditions. For example, smaller regional airports may be more sensitive to delays because even a single delayed flight can significantly impact the overall schedule, as Lincoln Airport, I have experienced a couple of years, before, whereas larger hubs may better absorb minor delays.
